@@ -1,0 +1,122 @@
+blockquote {
+  color: #fff;
+  text-shadow: 7px 1px 30px rgba(150, 150, 156, 1);
+  z-index: 2;
+  font-size: 2rem;
+  width: 90%;
+  margin-left: 20px;
+  font-family: 'Lora', serif;
+  font-weight: 600;
+
+  background: rgba(0, 0, 0, 0.5);
+  white-space: pre-line;
+  text-align: center;
+}
+
+.top-50-local {
+  top: 50% !important;
+}
+
+.download-btn {
+  z-index: 5;
+}
+
+body {
+  background-image: url('../assets/quote_bg.svg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  background-size: 500px 900px;
+  font-family: 'Lora', serif;
+}
+
+.loader {
+  height: 100vh;
+  width: 100vw;
+  background-color: #2a2a2ad1;
+  color: #fff;
+  padding: 0;
+  margin: 0;
+  position: absolute;
+  z-index: 14;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  z-index: 15;
+}
+.loading div {
+  width: 1rem;
+  height: 1rem;
+  margin: 2rem 0.3rem;
+  background: #958eff;
+  border-radius: 50%;
+  -webkit-animation: 0.6s bounce infinite alternate;
+  animation: 0.6s bounce infinite alternate;
+}
+.loading div:nth-child(2) {
+  -webkit-animation-delay: 0.2s;
+  animation-delay: 0.2s;
+}
+.loading div:nth-child(3) {
+  -webkit-animation-delay: 0.3s;
+  animation-delay: 0.3s;
+}
+
+@keyframes bounce {
+  to {
+    opacity: 0.3;
+    transform: translate3d(0, -1rem, 0);
+  }
+}
+
+.top-50-local {
+  top: 35% !important;
+}
+
+.start-50-local {
+  left: 45% !important;
+}
+
+@media only screen and (max-width: 600px) {
+  body {
+    background-size: 500px 800px;
+  }
+
+  blockquote {
+    font-size: 0.8em;
+    top: 30% !important;
+    font-size: small;
+  }
+
+  h1 {
+    display: block;
+    font-size: calc(1.525rem + 3.3vw);
+    font-weight: 300;
+    line-height: 1.2;
+  }
+
+  .rs-fix {
+    flex: auto;
+    text-align: center;
+    padding: 5px 20px;
+  }
+
+  .rs-fix + div {
+    text-align: center !important;
+    padding: 10px 0 0 0;
+  }
+
+  .footer {
+    width: 65%;
+  }
+
+  .top-50-local {
+    top: 35% !important;
+  }
+
+  .start-50-local {
+    left: 40% !important;
+  }
+}
