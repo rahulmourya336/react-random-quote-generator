@@ -6,7 +6,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 Refer `package.json` for more info.
 
-### Todo app built with React
+### Quote Generator
 
 ![Screenshot](https://i.ibb.co/QmSmgDg/image.png)
 
