@@ -8,7 +8,7 @@ Refer `package.json` for more info.
 
 ### Todo app built with React
 
-[Screenshot](https://i.ibb.co/QmSmgDg/image.png)
+![Screenshot](https://i.ibb.co/QmSmgDg/image.png)
 
 ### Built with
 ---
