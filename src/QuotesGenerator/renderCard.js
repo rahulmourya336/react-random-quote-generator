@@ -1,16 +1,68 @@
 /*
-  Draws the finished card straight onto a canvas rather than screenshotting the
-  DOM. The output is a clean 1200x800 (or 1080x1350) poster at a fixed size, it
-  is not tied to whatever the viewport happens to be, and it keeps the on-screen
-  CSS free to use blend modes and filters.
+  Draws the finished image straight onto a canvas rather than screenshotting the
+  DOM, so the output is a real fixed-size image at whatever the chosen format
+  needs, and the on-screen CSS stays free to use blend modes and filters.
 */
 
 const INK = '#17122e';
 const ROSE = '#ef899e';
 
-export const PRESETS = {
-  landscape: { width: 1200, height: 800 },
-  portrait: { width: 1080, height: 1350 },
+/*
+  Every size the app can produce. `ratio` drives the on-screen plate, `w`/`h`
+  drive both the export and the backdrop request, so what you see cropped on the
+  plate is exactly what you get in the file.
+
+  `placement` is only the starting point. The formats that get cropped or
+  covered in use begin centred, because an avatar is masked to a circle and a
+  wallpaper sits behind a clock and icons, but any size can be moved anywhere.
+*/
+export const FORMATS = {
+  post: {
+    label: 'Card',
+    note: 'posts and messages',
+    w: 1200,
+    h: 800,
+    ratio: 1.5,
+    textWidth: 0.73,
+    placement: { v: 'bottom', h: 'left' },
+  },
+  square: {
+    label: 'Profile',
+    note: 'avatars, cropped round',
+    w: 1080,
+    h: 1080,
+    ratio: 1,
+    // Kept inside the circle an avatar gets masked to.
+    textWidth: 0.66,
+    placement: { v: 'middle', h: 'center' },
+  },
+  desktop: {
+    label: 'Desktop',
+    note: '16:9 screens',
+    w: 2560,
+    h: 1440,
+    ratio: 1.7778,
+    textWidth: 0.73,
+    placement: { v: 'bottom', h: 'left' },
+  },
+  phone: {
+    label: 'Phone',
+    note: 'lock and home screens',
+    w: 1170,
+    h: 2532,
+    ratio: 0.4621,
+    textWidth: 0.82,
+    placement: { v: 'middle', h: 'center' },
+  },
+};
+
+// Text size steps, as a multiplier on the size the quote would otherwise get.
+export const SCALES = [0.7, 0.85, 1, 1.2, 1.45];
+export const DEFAULT_SCALE = 2; // index into SCALES
+
+export const backdropFor = (seed, format) => {
+  const { w, h } = FORMATS[format] ?? FORMATS.post;
+  return `https://picsum.photos/seed/${seed}/${w}/${h}`;
 };
 
 function loadImage(src) {
@@ -61,10 +113,61 @@ function drawGrain(ctx, width, height) {
 
   ctx.save();
   ctx.globalCompositeOperation = 'overlay';
-  ctx.globalAlpha = 0.16;
+  ctx.globalAlpha = 0.14;
   ctx.fillStyle = ctx.createPattern(tile, 'repeat');
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
+}
+
+// The scrim follows the words: it weights toward whichever edge they sit
+// against, and becomes an even wash with a vignette when they sit in the middle.
+function drawScrim(ctx, width, height, placement) {
+  if (placement.v === 'middle') {
+    ctx.fillStyle = 'rgba(23, 18, 46, 0.6)';
+    ctx.fillRect(0, 0, width, height);
+    const vignette = ctx.createRadialGradient(
+      width / 2,
+      height / 2,
+      Math.min(width, height) * 0.2,
+      width / 2,
+      height / 2,
+      Math.max(width, height) * 0.72,
+    );
+    vignette.addColorStop(0, 'rgba(23, 18, 46, 0.08)');
+    vignette.addColorStop(1, 'rgba(23, 18, 46, 0.82)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+    return;
+  }
+
+  const fromBottom = placement.v === 'bottom';
+  const gradient = ctx.createLinearGradient(
+    0,
+    fromBottom ? height : 0,
+    0,
+    fromBottom ? 0 : height,
+  );
+  gradient.addColorStop(0, 'rgba(23, 18, 46, 0.93)');
+  gradient.addColorStop(0.22, 'rgba(23, 18, 46, 0.72)');
+  gradient.addColorStop(0.52, 'rgba(23, 18, 46, 0.3)');
+  gradient.addColorStop(0.82, 'rgba(23, 18, 46, 0.06)');
+  gradient.addColorStop(1, 'rgba(23, 18, 46, 0.12)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  if (placement.h !== 'center') {
+    const fromLeft = placement.h === 'left';
+    const side = ctx.createLinearGradient(
+      fromLeft ? 0 : width,
+      0,
+      fromLeft ? width * 0.52 : width * 0.48,
+      0,
+    );
+    side.addColorStop(0, 'rgba(23, 18, 46, 0.42)');
+    side.addColorStop(1, 'rgba(23, 18, 46, 0)');
+    ctx.fillStyle = side;
+    ctx.fillRect(0, 0, width, height);
+  }
 }
 
 function wrap(ctx, text, maxWidth) {
@@ -85,12 +188,12 @@ function wrap(ctx, text, maxWidth) {
 
 const quoteFont = (size) => `500 ${size}px Fraunces, Georgia, serif`;
 
-// Mirrors the type-size bands the plate uses on screen, as a fraction of the
-// card height, so the export is set the way the preview was.
-function bandCeiling(text) {
-  if (text.length <= 62) return 0.105;
-  if (text.length <= 120) return 0.075;
-  if (text.length <= 200) return 0.052;
+// Mirrors the type bands the plate uses on screen, as a fraction of the image
+// width, so the file is set the way the preview was.
+export function bandCeiling(text) {
+  if (text.length <= 62) return 0.088;
+  if (text.length <= 120) return 0.066;
+  if (text.length <= 200) return 0.05;
   return 0.04;
 }
 
@@ -114,23 +217,32 @@ function slug(value) {
   );
 }
 
-function toBlob(canvas) {
+function toBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) =>
-        blob ? resolve(blob) : reject(new Error('The card could not be encoded.')),
-      'image/jpeg',
-      0.92,
+        blob ? resolve(blob) : reject(new Error('The image could not be encoded.')),
+      type,
+      quality,
     );
   });
 }
 
 /**
- * Renders the card and hands it to the browser as a download.
- * @returns {Promise<{width: number, height: number}>} the exported size
+ * Paints the image and hands back the encoded blobs.
+ * PNG comes along because the clipboard will not take a JPEG.
  */
-export async function downloadCard({ src, text, author, orientation = 'landscape' }) {
-  const { width, height } = PRESETS[orientation] ?? PRESETS.landscape;
+export async function renderCard({
+  src,
+  text,
+  author,
+  format = 'post',
+  placement,
+  scale = 1,
+}) {
+  const spec = FORMATS[format] ?? FORMATS.post;
+  const { w: width, h: height } = spec;
+  const where = placement ?? spec.placement;
   const [image] = await Promise.all([loadImage(src), ensureFonts()]);
 
   const canvas = document.createElement('canvas');
@@ -142,67 +254,125 @@ export async function downloadCard({ src, text, author, orientation = 'landscape
   ctx.fillRect(0, 0, width, height);
 
   ctx.save();
-  ctx.filter = 'saturate(0.4) contrast(1.04) brightness(1.06)';
+  ctx.filter = 'saturate(0.62) contrast(1.05) brightness(1.02)';
   drawCover(ctx, image, width, height);
   ctx.restore();
 
-  // The same two-part scrim the plate uses on screen: bottom-heavy, plus a
-  // wash from the left so the text sits on settled ground.
-  const vertical = ctx.createLinearGradient(0, height, 0, 0);
-  vertical.addColorStop(0, 'rgba(23, 18, 46, 0.93)');
-  vertical.addColorStop(0.22, 'rgba(23, 18, 46, 0.72)');
-  vertical.addColorStop(0.52, 'rgba(23, 18, 46, 0.3)');
-  vertical.addColorStop(0.82, 'rgba(23, 18, 46, 0.06)');
-  vertical.addColorStop(1, 'rgba(23, 18, 46, 0.12)');
-  ctx.fillStyle = vertical;
-  ctx.fillRect(0, 0, width, height);
-
-  const horizontal = ctx.createLinearGradient(0, 0, width * 0.52, 0);
-  horizontal.addColorStop(0, 'rgba(23, 18, 46, 0.42)');
-  horizontal.addColorStop(1, 'rgba(23, 18, 46, 0)');
-  ctx.fillStyle = horizontal;
-  ctx.fillRect(0, 0, width, height);
-
+  drawScrim(ctx, width, height, where);
   drawGrain(ctx, width, height);
 
   const pad = Math.round(width * 0.075);
-  const authorSize = Math.round(height * 0.026);
+  const authorSize = Math.round(width * 0.021);
   const ruleWidth = Math.round(width * 0.04);
   const gutter = Math.round(authorSize * 0.85);
   const lineHeight = 1.14;
 
-  // Attribution first, so the quote can be stacked upwards from above it.
-  const authorBaseline = height - pad;
-  ctx.fillStyle = ROSE;
-  ctx.fillRect(pad, Math.round(authorBaseline - authorSize * 0.3), ruleWidth, 1);
-
-  ctx.font = `500 ${authorSize}px Archivo, system-ui, sans-serif`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
-  ctx.fillText(author, pad + ruleWidth + gutter, authorBaseline);
-
   const { size, lines } = fitQuote(ctx, text, {
-    maxWidth: width - pad * 2 - (orientation === 'portrait' ? 0 : width * 0.12),
-    maxHeight: height * 0.46,
-    max: Math.round(height * bandCeiling(text)),
-    min: Math.round(height * 0.024),
+    maxWidth: width * spec.textWidth,
+    maxHeight: height * 0.66,
+    max: Math.round(width * bandCeiling(text) * scale),
+    min: Math.round(width * 0.02),
     lineHeight,
   });
 
+  // Stack the quote and its attribution as one block, then place the block.
+  const quoteHeight = lines.length * size * lineHeight;
+  const spacer = Math.round(authorSize * 1.6);
+  const blockHeight = quoteHeight + spacer + authorSize;
+
+  const blockTop = {
+    top: pad,
+    middle: Math.round((height - blockHeight) / 2),
+    bottom: height - pad - blockHeight,
+  }[where.v];
+
+  const textX = { left: pad, center: width / 2, right: width - pad }[where.h];
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = where.h === 'center' ? 'center' : where.h;
   ctx.fillStyle = '#ffffff';
-  const quoteBottom = authorBaseline - authorSize - Math.round(height * 0.05);
+  ctx.font = quoteFont(size);
   lines.forEach((line, i) => {
-    const y = quoteBottom - (lines.length - 1 - i) * size * lineHeight;
-    ctx.fillText(line, pad, y);
+    ctx.fillText(line, textX, blockTop + size * 0.86 + i * size * lineHeight);
   });
 
-  const blob = await toBlob(canvas);
+  const authorBaseline = blockTop + quoteHeight + spacer + authorSize * 0.8;
+  ctx.font = `500 ${authorSize}px Archivo, system-ui, sans-serif`;
+  const authorWidth = ctx.measureText(author).width;
+  const runWidth = ruleWidth + gutter + authorWidth;
+
+  const ruleX = {
+    left: pad,
+    center: width / 2 - runWidth / 2,
+    right: width - pad - runWidth,
+  }[where.h];
+
+  ctx.fillStyle = ROSE;
+  ctx.fillRect(
+    ruleX,
+    Math.round(authorBaseline - authorSize * 0.3),
+    ruleWidth,
+    Math.max(1, Math.round(width / 1200)),
+  );
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+  ctx.fillText(author, ruleX + ruleWidth + gutter, authorBaseline);
+
+  const [jpeg, png] = await Promise.all([
+    toBlob(canvas, 'image/jpeg', 0.92),
+    toBlob(canvas, 'image/png'),
+  ]);
+
+  return {
+    width,
+    height,
+    jpeg,
+    png,
+    filename: `quote-${slug(author)}-${format}.jpg`,
+  };
+}
+
+export function saveToDisk(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `quote-${slug(author)}.jpg`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
 
-  return { width, height };
+export function canShareImage() {
+  if (typeof navigator === 'undefined' || !navigator.canShare) return false;
+  try {
+    const probe = new File([new Blob([''])], 'probe.jpg', { type: 'image/jpeg' });
+    return navigator.canShare({ files: [probe] });
+  } catch {
+    return false;
+  }
+}
+
+export async function shareImage({ blob, filename, text, author }) {
+  const file = new File([blob], filename, { type: blob.type });
+  await navigator.share({
+    files: [file],
+    title: 'Quotes Generator',
+    text: `“${text}”\n${author}`,
+  });
+}
+
+export function canCopyImage() {
+  return (
+    typeof navigator !== 'undefined' &&
+    !!navigator.clipboard &&
+    typeof window !== 'undefined' &&
+    typeof window.ClipboardItem !== 'undefined'
+  );
+}
+
+export async function copyImage(pngBlob) {
+  // Chrome only accepts PNG on the clipboard, which is why both are encoded.
+  await navigator.clipboard.write([
+    new window.ClipboardItem({ 'image/png': pngBlob }),
+  ]);
 }

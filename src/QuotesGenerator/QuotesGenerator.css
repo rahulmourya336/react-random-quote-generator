@@ -1,6 +1,13 @@
+/*
+  Radius carries hierarchy rather than being one value everywhere: the plate is
+  a softly rounded object, controls are pills, and the little cells inside them
+  are barely rounded. Grouping comes from tinted surfaces and space, not from
+  outlining every control.
+*/
+
 .app {
   min-height: 100dvh;
-  max-width: 76rem;
+  max-width: 78rem;
   margin-inline: auto;
   padding:
     calc(var(--s-5) + env(safe-area-inset-top))
@@ -8,7 +15,7 @@
     calc(var(--s-4) + env(safe-area-inset-bottom))
     calc(clamp(var(--s-4), 3vw, var(--s-6)) + env(safe-area-inset-left));
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   gap: clamp(var(--s-5), 4vw, var(--s-6));
 }
 
@@ -16,12 +23,14 @@
 
 .masthead {
   display: flex;
-  align-items: center;
-  gap: var(--s-3);
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
 }
 
 .masthead__mark {
   flex: none;
+  align-self: center;
 }
 
 .masthead__mark circle + circle {
@@ -36,30 +45,46 @@
   line-height: 1;
 }
 
+.masthead__note {
+  color: var(--mute);
+  font-size: var(--t-sm);
+  margin-inline-start: auto;
+}
+
 /* ---------- stage ---------- */
 
 .stage {
+  --stage-h: clamp(19rem, 56vh, 34rem);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 17.5rem;
+  grid-template-columns: minmax(0, 1fr) 18rem;
   gap: clamp(var(--s-5), 3vw, var(--s-6));
-  align-items: start;
-  /* Spare height on a tall window is split above and below the plate rather
-     than pooling under it. The page uses min-height, so tall content grows the
-     grid instead of being clipped by the centring. */
+  align-items: center;
   align-content: center;
+}
+
+.platebox {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--s-4);
+  min-height: var(--stage-h);
 }
 
 /* ---------- the plate ---------- */
 
 .plate {
+  --ratio: 1.5;
   position: relative;
-  aspect-ratio: 3 / 2;
+  /* Sized from the stage height so switching size reshapes the plate in place,
+     and capped so a 16:9 wallpaper cannot outgrow its column. */
+  width: min(100%, calc(var(--stage-h) * var(--ratio)));
+  aspect-ratio: var(--ratio);
+  container-type: size;
   overflow: hidden;
-  border-radius: var(--radius);
+  border-radius: 18px;
   background-image: linear-gradient(155deg, #2c2258 0%, #17122e 55%, #3b2b52 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(242, 239, 248, 0.07),
-    0 30px 60px -32px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 40px 80px -36px rgba(0, 0, 0, 0.95);
+  transition: width 0.4s var(--ease);
 }
 
 .plate__image {
@@ -68,9 +93,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: saturate(0.4) contrast(1.04) brightness(1.06);
+  filter: saturate(0.62) contrast(1.05) brightness(1.02);
   opacity: 0;
-  transition: opacity 0.6s var(--ease);
+  transition: opacity 0.5s var(--ease);
 }
 
 .plate[data-plate='ready'] .plate__image {
@@ -82,6 +107,10 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+.plate[data-v='top'] .plate__scrim {
+  transform: scaleY(-1);
 }
 
 .plate__scrim {
@@ -97,6 +126,41 @@
     linear-gradient(to right, rgba(23, 18, 46, 0.42) 0%, rgba(23, 18, 46, 0) 52%);
 }
 
+.plate[data-h='right'] .plate__scrim {
+  background-image:
+    linear-gradient(
+      to top,
+      rgba(23, 18, 46, 0.93) 0%,
+      rgba(23, 18, 46, 0.72) 22%,
+      rgba(23, 18, 46, 0.3) 52%,
+      rgba(23, 18, 46, 0.06) 82%,
+      rgba(23, 18, 46, 0.12) 100%
+    ),
+    linear-gradient(to left, rgba(23, 18, 46, 0.42) 0%, rgba(23, 18, 46, 0) 52%);
+}
+
+.plate[data-h='center'][data-v='bottom'] .plate__scrim,
+.plate[data-h='center'][data-v='top'] .plate__scrim {
+  background-image: linear-gradient(
+    to top,
+    rgba(23, 18, 46, 0.93) 0%,
+    rgba(23, 18, 46, 0.72) 22%,
+    rgba(23, 18, 46, 0.3) 52%,
+    rgba(23, 18, 46, 0.06) 82%,
+    rgba(23, 18, 46, 0.12) 100%
+  );
+}
+
+/* Words in the middle need an even wash and a vignette; words against an edge
+   get a gradient weighted to that edge. */
+.plate[data-v='middle'] .plate__scrim {
+  background-image: radial-gradient(
+    120% 90% at 50% 50%,
+    rgba(23, 18, 46, 0.62) 0%,
+    rgba(23, 18, 46, 0.88) 100%
+  );
+}
+
 .plate__grain {
   opacity: 0.16;
   mix-blend-mode: overlay;
@@ -106,13 +170,20 @@
 
 .plate__caption {
   position: absolute;
-  inset: auto 0 0 0;
-  padding: clamp(1.25rem, 3.4vw, 2.75rem);
+  inset: 0;
+  padding: 7cqw;
   display: grid;
-  justify-items: start;
-  gap: clamp(var(--s-3), 1.6vw, var(--s-5));
+  gap: 3cqh;
   animation: draw-in 0.42s var(--ease) both;
 }
+
+.plate[data-v='top'] .plate__caption { align-content: start; }
+.plate[data-v='middle'] .plate__caption { align-content: center; }
+.plate[data-v='bottom'] .plate__caption { align-content: end; }
+
+.plate[data-h='left'] .plate__caption { justify-items: start; text-align: left; }
+.plate[data-h='center'] .plate__caption { justify-items: center; text-align: center; }
+.plate[data-h='right'] .plate__caption { justify-items: end; text-align: right; }
 
 @keyframes draw-in {
   from {
@@ -125,51 +196,60 @@
   }
 }
 
+/* Type sizes off the plate, not the viewport, so a narrow phone wallpaper and a
+   wide desktop one are both set in proportion to the image they belong to. */
 .plate__quote {
   max-width: 22ch;
   overflow-wrap: anywhere;
-  font-size: clamp(1.25rem, 0.7rem + 2.4vw, 3rem);
   font-family: var(--serif);
   font-variation-settings: 'opsz' 144, 'SOFT' 30, 'WONK' 1;
   font-weight: 500;
+  font-size: calc(clamp(0.9rem, 6.6cqw, 4rem) * var(--text-scale, 1));
   line-height: 1.14;
   letter-spacing: -0.015em;
   text-wrap: balance;
   color: #fff;
 }
 
-/* A six-line aphorism and a four-word one cannot share a type size. */
 .plate__caption[data-length='short'] .plate__quote {
   max-width: 15ch;
-  font-size: clamp(1.75rem, 1rem + 3.3vw, 3.6rem);
+  font-size: calc(clamp(1rem, 8.8cqw, 5rem) * var(--text-scale, 1));
 }
 
 .plate__caption[data-length='medium'] .plate__quote {
   max-width: 19ch;
-  font-size: clamp(1.5rem, 0.85rem + 2.6vw, 2.8rem);
+  font-size: calc(clamp(0.95rem, 6.6cqw, 3.6rem) * var(--text-scale, 1));
 }
 
 .plate__caption[data-length='long'] .plate__quote {
   max-width: 26ch;
-  font-size: clamp(1.25rem, 0.75rem + 1.9vw, 2.1rem);
+  font-size: calc(clamp(0.9rem, 5cqw, 2.6rem) * var(--text-scale, 1));
 }
 
 .plate__caption[data-length='epic'] .plate__quote {
   max-width: 34ch;
-  font-size: clamp(1.05rem, 0.68rem + 1.4vw, 1.6rem);
+  font-size: calc(clamp(0.8rem, 4cqw, 2rem) * var(--text-scale, 1));
   line-height: 1.24;
 }
+
+/* An avatar is masked to a circle, so the words stay inside it. */
+.plate[data-format='square'] .plate__quote { max-width: 66%; }
+.plate[data-format='phone'] .plate__quote { max-width: 82%; }
 
 .plate__by {
   display: flex;
   align-items: center;
-  gap: var(--s-3);
+  gap: 2.4cqw;
   animation: draw-in 0.42s var(--ease) 0.1s both;
+}
+
+.plate[data-h='center'] .plate__by {
+  justify-content: center;
 }
 
 .plate__rule {
   flex: none;
-  width: 2.5rem;
+  width: 4cqw;
   height: 1px;
   background-color: var(--rose);
 }
@@ -178,7 +258,8 @@
   overflow-wrap: anywhere;
   font-style: normal;
   font-weight: 500;
-  font-size: clamp(0.8125rem, 0.72rem + 0.3vw, 1rem);
+  /* Not scaled: the attribution is a caption, and the canvas holds it fixed. */
+  font-size: clamp(0.7rem, 2.1cqw, 1.15rem);
   letter-spacing: 0.01em;
   color: rgba(255, 255, 255, 0.88);
 }
@@ -187,8 +268,7 @@
 .plate__quote,
 .plate__cite {
   padding: 0.06em 0.25em;
-  margin-inline-start: -0.25em;
-  border-radius: var(--radius);
+  border-radius: 6px;
   outline: none;
   cursor: text;
   transition:
@@ -207,124 +287,308 @@
   box-shadow: 0 0 0 1px rgba(144, 137, 250, 0.5);
 }
 
-/* ---------- rail ---------- */
+/* ---------- credit under the plate ---------- */
 
-.rail {
-  display: grid;
-  align-content: start;
-  gap: var(--s-5);
-}
-
-.rail__label {
-  display: grid;
+.credit {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: var(--s-3);
 }
 
-.rail__index {
+.credit__author {
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 40, 'SOFT' 30, 'WONK' 1;
+  font-weight: 500;
+  font-size: var(--t-lg);
+  letter-spacing: -0.01em;
+}
+
+.credit__index {
   font-size: var(--t-sm);
   color: var(--mute);
   font-variant-numeric: tabular-nums;
 }
 
-.rail__index b {
-  color: var(--chalk);
-  font-weight: 600;
-}
+/* ---------- rail ---------- */
 
-.rail__rule {
-  width: 100%;
-  border: 0;
-  border-top: 1px solid var(--edge);
-}
-
-.rail__author {
-  font-family: var(--serif);
-  font-variation-settings: 'opsz' 40, 'SOFT' 30, 'WONK' 1;
-  font-weight: 500;
-  font-size: var(--t-lg);
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-}
-
-.rail__actions {
+.rail {
   display: grid;
-  gap: var(--s-2);
+  align-content: center;
+  gap: var(--s-4);
 }
 
-.rail__note {
-  font-size: var(--t-sm);
+/* A tinted surface groups its controls without drawing a box around them. */
+.group {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: 14px;
+  background-color: rgba(242, 239, 248, 0.045);
+}
+
+.caption {
+  font-size: var(--t-xs);
   line-height: 1.5;
   color: var(--mute);
-  max-width: 32ch;
+  font-variant-numeric: tabular-nums;
 }
 
-.rail__status {
-  min-height: 2.6em;
+.caption--hint {
+  padding-inline: var(--s-1);
+}
+
+.status {
+  min-height: 1.5em;
   font-size: var(--t-sm);
   line-height: 1.4;
   color: var(--periwinkle);
 }
 
-.rail__status[data-tone='error'] {
+.status[data-tone='error'] {
   color: var(--rose);
 }
 
-/* ---------- buttons ---------- */
+/* ---------- pills ---------- */
 
-.btn {
+.draws {
   display: flex;
+  gap: var(--s-2);
+}
+
+.pill {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--edge);
-  border-radius: var(--radius);
-  background-color: transparent;
+  gap: var(--s-2);
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 999px;
+  background-color: rgba(242, 239, 248, 0.08);
   color: var(--chalk);
   font-weight: 500;
-  text-align: left;
   cursor: pointer;
   transition:
     background-color 0.16s var(--ease),
-    border-color 0.16s var(--ease),
-    color 0.16s var(--ease);
+    color 0.16s var(--ease),
+    opacity 0.16s var(--ease);
 }
 
-.btn:hover:not(:disabled) {
-  background-color: var(--ink-raised);
-  border-color: var(--periwinkle);
+.pill:hover:not(:disabled) {
+  background-color: rgba(242, 239, 248, 0.16);
 }
 
-.btn:disabled {
+.pill:disabled {
   opacity: 0.45;
   cursor: progress;
 }
 
-.btn--primary {
+.draws .pill--primary {
+  flex: 1;
+  justify-content: space-between;
+}
+
+.pill--primary {
   background-color: var(--periwinkle);
-  border-color: var(--periwinkle);
   color: var(--ink);
   font-weight: 600;
 }
 
-.btn--primary:hover:not(:disabled) {
+.pill--primary:hover:not(:disabled) {
   background-color: #a7a1fb;
-  border-color: #a7a1fb;
-  color: var(--ink);
 }
 
-.btn__key {
+.pill--icon {
   flex: none;
-  padding: 0.05rem 0.35rem;
-  border: 1px solid var(--edge);
-  border-radius: var(--radius);
+  width: 2.75rem;
+  padding: 0;
+  justify-content: center;
+}
+
+/* One accent for anything you can act on; rose stays on the attribution. */
+.pill--share {
+  background-color: var(--periwinkle);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.pill--share:hover:not(:disabled) {
+  background-color: #a7a1fb;
+}
+
+.pill__label {
+  white-space: nowrap;
+}
+
+.pill__key {
+  margin-left: auto;
+  padding-left: var(--s-2);
+  font-size: var(--t-xs);
+  color: currentColor;
+  opacity: 0.55;
+}
+
+/* ---------- size picker ---------- */
+
+.sizes {
+  display: flex;
+  gap: var(--s-1);
+}
+
+.size {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.25rem;
+  border: 0;
+  border-radius: 10px;
+  background-color: transparent;
+  color: var(--mute);
+  cursor: pointer;
+  transition:
+    background-color 0.16s var(--ease),
+    color 0.16s var(--ease);
+}
+
+.size:hover {
+  background-color: rgba(242, 239, 248, 0.07);
+  color: var(--chalk);
+}
+
+.size[aria-pressed='true'] {
+  background-color: rgba(144, 137, 250, 0.2);
+  color: var(--chalk);
+}
+
+/* The chip carries the shape it makes, so the choice is legible at a glance. */
+.size__shape {
+  display: block;
+  width: min(1.4rem, calc(1.2rem * var(--ratio)));
+  height: min(1.2rem, calc(1.4rem / var(--ratio)));
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.8;
+}
+
+.size[aria-pressed='true'] .size__shape {
+  background-color: var(--periwinkle);
+  border-color: var(--periwinkle);
+  opacity: 1;
+}
+
+.size__label {
+  font-size: var(--t-xs);
+  font-weight: 500;
+}
+
+/* ---------- placement and text size ---------- */
+
+.tweaks {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* Nine cells standing in for the image, so the choice is spatial rather than a
+   list of words. */
+.place {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 4px;
+  border-radius: 8px;
+  background-color: rgba(23, 18, 46, 0.5);
+}
+
+.place__cell {
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background-color: rgba(242, 239, 248, 0.1);
+  cursor: pointer;
+  transition: background-color 0.14s var(--ease);
+}
+
+.place__cell:hover {
+  background-color: rgba(144, 137, 250, 0.45);
+}
+
+.place__cell[aria-pressed='true'] {
+  background-color: var(--periwinkle);
+}
+
+.textsize {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.textsize__value {
   font-size: var(--t-xs);
   color: var(--mute);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.btn--primary .btn__key {
-  border-color: rgba(23, 18, 46, 0.3);
-  color: rgba(23, 18, 46, 0.66);
+.step {
+  flex: none;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 0;
+  border-radius: 999px;
+  background-color: rgba(242, 239, 248, 0.1);
+  color: var(--chalk);
+  font-size: var(--t-base);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.14s var(--ease);
+}
+
+.step:hover:not(:disabled) {
+  background-color: rgba(144, 137, 250, 0.45);
+}
+
+.step:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.linkish {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mute);
+  font-size: var(--t-xs);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.linkish:hover {
+  color: var(--periwinkle);
+}
+
+/* ---------- share row ---------- */
+
+.share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.share .pill {
+  flex: 1;
+  min-width: 9rem;
+  justify-content: flex-start;
 }
 
 /* ---------- colophon ---------- */
@@ -350,55 +614,86 @@
   color: var(--periwinkle);
 }
 
-/* ---------- narrow viewports ---------- */
+/* ---------- phones and small tablets ---------- */
 
 @media (max-width: 62rem) {
+  .app {
+    /* Room for the fixed action bar. */
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    gap: var(--s-5);
+  }
+
   .stage {
+    --stage-h: clamp(16rem, 44vh, 26rem);
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .platebox {
+    min-height: 0;
+  }
+
+  .masthead__note {
+    margin-inline-start: 0;
+    flex-basis: 100%;
+  }
+
   .rail {
-    gap: var(--s-4);
+    align-content: start;
   }
 
-  .rail__actions {
-    grid-template-columns: 1fr 1fr;
+  /* The three outputs move to a thumb-reachable bar pinned to the bottom. */
+  .share {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 5;
+    flex-wrap: nowrap;
+    padding:
+      var(--s-3)
+      calc(var(--s-4) + env(safe-area-inset-right))
+      calc(var(--s-3) + env(safe-area-inset-bottom))
+      calc(var(--s-4) + env(safe-area-inset-left));
+    background-color: rgba(23, 18, 46, 0.82);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    box-shadow: 0 -1px 0 rgba(242, 239, 248, 0.08);
   }
 
-  .rail__actions .btn--download {
-    grid-column: 1 / -1;
+  .share .pill {
+    min-width: 0;
+    justify-content: center;
+  }
+
+  /* Share keeps its words; the other two become icons so all three fit. */
+  .share .pill:not(.pill--share) {
+    flex: none;
+    width: 2.75rem;
+    padding: 0;
+  }
+
+  /* No room for key hints once the bar is a row of thumb targets. */
+  .share .pill__key {
+    display: none;
+  }
+
+  .share .pill:not(.pill--share) .pill__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
-@media (max-width: 40rem) {
-  .plate {
-    aspect-ratio: 4 / 5;
-  }
-
-  .plate__caption[data-length='short'] .plate__quote {
-    max-width: 13ch;
-    font-size: clamp(1.75rem, 1.1rem + 4.6vw, 2.6rem);
-  }
-
-  .plate__caption[data-length='medium'] .plate__quote {
-    max-width: 16ch;
-    font-size: clamp(1.5rem, 1rem + 3.6vw, 2.2rem);
-  }
-
-  .plate__caption[data-length='long'] .plate__quote {
-    max-width: 21ch;
-    font-size: clamp(1.25rem, 0.9rem + 2.6vw, 1.75rem);
-  }
-
-  .plate__caption[data-length='epic'] .plate__quote {
-    max-width: 27ch;
-    font-size: clamp(1rem, 0.8rem + 1.9vw, 1.35rem);
+@media (max-width: 26rem) {
+  .size__label {
+    font-size: 0.7rem;
   }
 }
 
 /* Key hints are noise where there is no keyboard. */
 @media (hover: none) {
-  .btn__key {
+  .pill__key {
     display: none;
   }
 }

@@ -2,7 +2,7 @@
   Generates the app icons and the social card from the Ink & Plate palette.
   Run with `npm run icons`.
 
-  The mark is two overlapping ink dots — periwinkle and rose, screen-blended
+  The mark is two overlapping ink dots, periwinkle and rose, screen-blended
   where they cross, the way two spot inks overprint. It is pure geometry, so
   this script rasterises it directly and writes the PNGs itself rather than
   pulling in an image library for six static files.
