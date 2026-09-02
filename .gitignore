@@ -25,5 +25,11 @@ pnpm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# Claude Code skills are vendored copies of other people's repos and ship no
+# licence, so they are not redistributed here. skills-lock.json records the
+# source, path and hash of each, which is what makes them reinstallable.
+.claude/skills/
+.agents/
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
