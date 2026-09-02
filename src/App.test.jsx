@@ -3,6 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { expect, test } from 'vitest';
 import App from './App';
 import QUOTES from './QuotesGenerator/QuoteList.json';
+import { typeset } from './QuotesGenerator/QuotesGenerator';
+
+test('straightens typewriter punctuation into real quotes and dashes', () => {
+  expect(typeset("don't")).toBe('don’t');
+  expect(typeset('He said "go".')).toBe('He said “go”.');
+  expect(typeset('Wait...')).toBe('Wait…');
+});
 
 test('opens with a quote drawn from the collection', () => {
   render(<App />);
@@ -10,7 +17,7 @@ test('opens with a quote drawn from the collection', () => {
   const quote = document.querySelector('blockquote').textContent;
   const author = document.querySelector('cite').textContent;
 
-  expect(QUOTES.some((entry) => entry.text === quote)).toBe(true);
+  expect(QUOTES.some((entry) => typeset(entry.text) === quote)).toBe(true);
   expect(author).not.toBe('');
   expect(screen.getByText(/of 1,643/).textContent).toMatch(
     /^№ [\d,]+ of 1,643$/,

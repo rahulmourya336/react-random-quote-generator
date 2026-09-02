@@ -7,7 +7,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo192.png', 'logo512.png', 'robots.txt'],
+      includeAssets: [
+        'favicon.ico',
+        'favicon.svg',
+        'apple-touch-icon.png',
+        'robots.txt',
+      ],
       manifest: {
         name: 'Quotes Generator',
         short_name: 'Quotes',
@@ -16,13 +21,16 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
+        orientation: 'any',
+        lang: 'en',
+        categories: ['graphics', 'lifestyle', 'utilities'],
         theme_color: '#17122E',
         background_color: '#17122E',
         icons: [
-          { src: 'logo192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'logo512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
           {
-            src: 'logo512.png',
+            src: 'icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

@@ -2,7 +2,11 @@
   min-height: 100dvh;
   max-width: 76rem;
   margin-inline: auto;
-  padding: var(--s-5) clamp(var(--s-4), 3vw, var(--s-6)) var(--s-4);
+  padding:
+    calc(var(--s-5) + env(safe-area-inset-top))
+    calc(clamp(var(--s-4), 3vw, var(--s-6)) + env(safe-area-inset-right))
+    calc(var(--s-4) + env(safe-area-inset-bottom))
+    calc(clamp(var(--s-4), 3vw, var(--s-6)) + env(safe-area-inset-left));
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: clamp(var(--s-5), 4vw, var(--s-6));
@@ -39,6 +43,10 @@
   grid-template-columns: minmax(0, 1fr) 17.5rem;
   gap: clamp(var(--s-5), 3vw, var(--s-6));
   align-items: start;
+  /* Spare height on a tall window is split above and below the plate rather
+     than pooling under it. The page uses min-height, so tall content grows the
+     grid instead of being clipped by the centring. */
+  align-content: center;
 }
 
 /* ---------- the plate ---------- */
@@ -119,6 +127,7 @@
 
 .plate__quote {
   max-width: 22ch;
+  overflow-wrap: anywhere;
   font-size: clamp(1.25rem, 0.7rem + 2.4vw, 3rem);
   font-family: var(--serif);
   font-variation-settings: 'opsz' 144, 'SOFT' 30, 'WONK' 1;
@@ -166,6 +175,7 @@
 }
 
 .plate__cite {
+  overflow-wrap: anywhere;
   font-style: normal;
   font-weight: 500;
   font-size: clamp(0.8125rem, 0.72rem + 0.3vw, 1rem);

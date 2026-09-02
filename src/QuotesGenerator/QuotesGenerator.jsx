@@ -12,6 +12,17 @@ const backdropFor = (seed) => `https://picsum.photos/seed/${seed}/1600/1200`;
 
 const SHORTCUTS = { n: 'quote', b: 'backdrop', d: 'download' };
 
+// The collection is stored with typewriter punctuation. On a plate set in
+// Fraunces, straight quotes read as a mistake, so they are corrected on the way
+// to the page — and the export reads the corrected text back off the DOM.
+export function typeset(text) {
+  return text
+    .replace(/\.\.\./g, '…')
+    .replace(/"([^"]*)"/g, '“$1”')
+    .replace(/(\w)'(\w)/g, '$1’$2')
+    .replace(/'/g, '’');
+}
+
 // Sets the type size band, so a four-word aphorism and a six-line one each get
 // a size that suits them rather than one compromise between the two.
 function lengthBand(text) {
@@ -34,7 +45,8 @@ export default function QuotesGenerator() {
   const citeRef = useRef(null);
 
   const quote = QUOTES[index];
-  const author = quote.author || 'Anonymous';
+  const text = typeset(quote.text);
+  const author = typeset(quote.author || 'Anonymous');
 
   const drawQuote = useCallback(() => {
     setIndex((current) => {
@@ -68,7 +80,7 @@ export default function QuotesGenerator() {
       const { width, height } = await downloadCard({
         src: backdropFor(seed),
         // Read from the DOM so anything rewritten in place is what gets saved.
-        text: quoteRef.current?.textContent?.trim() || quote.text,
+        text: quoteRef.current?.textContent?.trim() || text,
         author: citeRef.current?.textContent?.trim() || author,
         orientation,
       });
@@ -81,11 +93,11 @@ export default function QuotesGenerator() {
     } finally {
       setBusy(false);
     }
-  }, [seed, quote.text, author, orientation]);
+  }, [seed, text, author, orientation]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
       if (event.target.isContentEditable) return;
       const action = SHORTCUTS[event.key.toLowerCase()];
       if (!action) return;
@@ -101,8 +113,8 @@ export default function QuotesGenerator() {
   // Rewriting stays plain text, whatever gets pasted in.
   const onPaste = (event) => {
     event.preventDefault();
-    const text = event.clipboardData.getData('text/plain').replace(/\s+/g, ' ');
-    document.execCommand('insertText', false, text);
+    const pasted = event.clipboardData.getData('text/plain').replace(/\s+/g, ' ');
+    document.execCommand('insertText', false, typeset(pasted));
   };
 
   return (
@@ -127,6 +139,9 @@ export default function QuotesGenerator() {
             className="plate__image"
             src={backdropFor(seed)}
             alt=""
+            width="1600"
+            height="1200"
+            fetchPriority="high"
             crossOrigin="anonymous"
             onLoad={() => setPlate('ready')}
             onError={() => setPlate('failed')}
@@ -137,7 +152,7 @@ export default function QuotesGenerator() {
           <figcaption
             className="plate__caption"
             key={draw}
-            data-length={lengthBand(quote.text)}
+            data-length={lengthBand(text)}
           >
             <blockquote
               className="plate__quote"
@@ -148,7 +163,7 @@ export default function QuotesGenerator() {
               onPaste={onPaste}
               aria-label="Quote, editable"
             >
-              {quote.text}
+              {text}
             </blockquote>
             <div className="plate__by">
               <span className="plate__rule" aria-hidden="true" />

@@ -11,7 +11,22 @@ npm run dev      # http://localhost:5173
 npm run build    # production bundle in dist/
 npm run preview  # serve the built bundle
 npm test         # vitest
+npm run icons    # regenerate the icons and social card
 ```
+
+### Icons
+
+`scripts/generate-icons.mjs` writes every icon, `favicon.ico`, `favicon.svg`
+and the 1200 × 630 `og.png` from the palette. The mark is two overlapping ink
+dots — periwinkle and rose, screen-blended where they cross, the way two spot
+inks overprint — so it is pure geometry and the script rasterises it directly
+rather than depending on an image library for six static files. Re-run it after
+changing a palette value.
+
+The social card carries the mark but no wordmark: rendering Fraunces would mean
+adding a font-capable rasteriser. The unfurl title and description supply the
+words. If you want the name set on the card, add `@resvg/resvg-js` and point it
+at the font file.
 
 ## How it works
 
